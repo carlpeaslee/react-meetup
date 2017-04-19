@@ -1,11 +1,15 @@
 import React, { Component } from 'react'
 import Auth0 from 'auth0-lock'
 import {auth0Domain, auth0ClientId, url} from 'config'
+import {getAllComments, createComment} from 'graphql'
+import {Col, Login, Submit, CommentInput, Comment, Text, Author } from 'styled'
 
 class App extends Component {
 
   state = {
-    email: false
+    email: false,
+    text: '',
+    comments: []
   }
 
   constructor() {
@@ -36,25 +40,80 @@ class App extends Component {
         }
       )
     })
+
+    this.polling = setInterval(
+      this.retrieveComments,
+      2000
+    )
+
+  }
+
+  retrieveComments = async () => {
+    try {
+      let comments = await getAllComments()
+      this.setState({comments})
+    } catch (error) {
+
+    }
+  }
+
+  submitComment = async () => {
+    let {author, text} = this.state
+    try {
+      await createComment(author, text)
+    } catch (error) {
+
+    }
+  }
+
+  handleChange = (e) => {
+    e.persist()
+    this.setState((prevState, props) => {
+      return {
+        text: e.target.value
+      }
+    })
   }
 
   render() {
     return (
-      <div>
-        {(this.state.email) ?
-          <h3>
-            Hello {this.state.email}
-          </h3> :
-          <button
+      <Col>
+        {(!this.state.email) ?
+          <Login
             onClick={()=>{
               this.auth.show()
             }}
           >
-            Login!
-          </button>
+            Login
+          </Login> :
+          <div>
+            <CommentInput
+              value={this.state.text}
+              onChange={this.handleChange}
+            />
+            <Submit
+              onClick={this.submitComment}
+            >
+              Submit Comment
+            </Submit>
+          </div>
         }
-
-      </div>
+        {this.state.comments.map(comment => {
+          return (
+            <Comment
+              key={comment.id}
+              author={comment.author}
+            >
+              <Text>
+                {comment.text}
+              </Text>
+              <Author>
+                {comment.author}
+              </Author>
+            </Comment>
+          )
+        })}
+      </Col>
     )
   }
 }
